@@ -50,5 +50,8 @@ func SetupRouter() *gin.Engine {
 		taskGroup.DELETE("/task/:id", taskCtrl.DeleteTask)
 	}
 
+	// Music
+	r.GET("/api/v1/music", controller.MusicList)
+
 	return r
 }
