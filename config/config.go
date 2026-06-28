@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"log"
+	"os"
 
 	"github.com/spf13/viper"
 )
@@ -43,6 +44,14 @@ func init() {
 
 	if err := viper.Unmarshal(&Conf); err != nil {
 		log.Fatalf("Failed to parse config: %v", err)
+	}
+
+	// 环境变量覆盖（用于 Docker 容器）
+	if v := os.Getenv("MYSQL_HOST"); v != "" {
+		Conf.MySQL.Host = v
+	}
+	if v := os.Getenv("REDIS_HOST"); v != "" {
+		Conf.Redis.Host = v
 	}
 }
 
