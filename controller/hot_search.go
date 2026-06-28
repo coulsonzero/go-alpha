@@ -34,5 +34,10 @@ func HotSearch(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, result)
+	// 透传 Python 返回的状态码
+	code := 200
+	if c, ok := result["code"].(float64); ok {
+		code = int(c)
+	}
+	c.JSON(code, result)
 }

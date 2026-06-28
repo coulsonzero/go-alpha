@@ -34,7 +34,7 @@ func SetupMySQL() *gorm.DB {
 	}
 	fmt.Println("MySQL connected successfully")
 	DB = db
-	DB.AutoMigrate(&User{})
+	DB.AutoMigrate(&User{}, &Task{})
 	return DB
 }
 

@@ -1,15 +1,19 @@
 #!/usr/bin/env python3
 """
-实时爬取微博热搜榜单
-支持 --date MM-DD 参数获取历史热搜
+实时爬取微博热搜榜单，以日期为文件名缓存到 data/ 目录
+支持 --date MM-DD 参数查询历史缓存数据
 """
 
 import argparse
+import glob
 import json
+import os
 import re
 import sys
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
+
+from urllib.parse import quote
 
 import requests
 
@@ -20,6 +24,8 @@ HEADERS = {
     ),
     "Referer": "https://weibo.com/",
 }
+
+DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data")
 
 # 类别关键词映射（按优先级排列）
 CATEGORY_RULES = [
@@ -54,17 +60,16 @@ def classify(title: str, note: str = "") -> str:
     return "其他"
 
 
-def fetch_hot_search(date_str: str = "") -> list[dict]:
-    """爬取微博热搜榜单，date_str 格式 MM-DD，为空则爬取实时"""
-    url = "https://weibo.com/ajax/side/hotSearch"
-    params = {}
-    if date_str:
-        # MM-DD -> YYYY-MM-DD
-        month, day = date_str.split("-")
-        full_date = f"{datetime.now().year}-{int(month):02d}-{int(day):02d}"
-        params["date"] = full_date
+def data_path(date_str: str) -> str:
+    """获取指定日期（MM-DD）的缓存文件路径"""
+    os.makedirs(DATA_DIR, exist_ok=True)
+    return os.path.join(DATA_DIR, f"{date_str}.json")
 
-    resp = requests.get(url, headers=HEADERS, params=params, timeout=10)
+
+def fetch_hot_search() -> list[dict]:
+    """爬取微博实时热搜榜单"""
+    url = "https://weibo.com/ajax/side/hotSearch"
+    resp = requests.get(url, headers=HEADERS, timeout=10)
     resp.raise_for_status()
     data = resp.json()
 
@@ -79,7 +84,7 @@ def fetch_hot_search(date_str: str = "") -> list[dict]:
             "hot": item.get("num", 0),
             "label": item.get("label_name", ""),
             "category": classify(title, note),
-            "url": f"https://weibo.com/weibo?q={item.get('word_scheme', item.get('word', ''))}",
+            "url": f"https://s.weibo.com/weibo?q={quote(item.get('word_scheme', item.get('word', '')))}",
         })
     return results
 
@@ -88,7 +93,7 @@ def print_hot_search(results: list[dict], date_str: str = "") -> None:
     """格式化打印热搜榜单"""
     label = f" ({date_str})" if date_str else ""
     print(f"{'='*60}")
-    print(f"  微博实时热搜榜{label}  ({time.strftime('%Y-%m-%d %H:%M:%S')})")
+    print(f"  微博热搜榜{label}  ({time.strftime('%Y-%m-%d %H:%M:%S')})")
     print(f"{'='*60}")
     for item in results:
         label = f" [{item['label']}]" if item["label"] else ""
@@ -97,23 +102,59 @@ def print_hot_search(results: list[dict], date_str: str = "") -> None:
         print(f"  {item['rank']:>3}. {cat} {item['title']}{label} {hot}")
 
 
+def cleanup_old_cache():
+    """清理超过5天的缓存文件"""
+    now = datetime.now()
+    keep_dates = {(now - timedelta(days=i)).strftime("%m-%d") for i in range(5)}
+
+    for fpath in glob.glob(os.path.join(DATA_DIR, "*.json")):
+        name = os.path.splitext(os.path.basename(fpath))[0]
+        if name not in keep_dates:
+            os.remove(fpath)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--json", action="store_true", help="输出 JSON 格式")
-    parser.add_argument("--date", type=str, default="", help="日期 MM-DD，为空则爬取实时")
+    parser.add_argument("--date", type=str, default="", help="日期 MM-DD，为空则爬取实时并缓存")
     args = parser.parse_args()
 
+    today = time.strftime("%m-%d")
+
+    if args.date:
+        # 查询历史缓存
+        path = data_path(args.date)
+        if not os.path.exists(path):
+            print(json.dumps({"code": 404, "error": f"没有 {args.date} 的历史数据"}, ensure_ascii=False))
+            return
+        with open(path) as f:
+            cached = json.load(f)
+        if args.json:
+            print(json.dumps({"code": 200, "date": args.date, "data": cached, "source": "cache"}, ensure_ascii=False))
+        else:
+            print_hot_search(cached, args.date)
+        return
+
     try:
-        results = fetch_hot_search(args.date)
+        results = fetch_hot_search()
+
+        # 缓存到本地
+        path = data_path(today)
+        with open(path, "w") as f:
+            json.dump(results, f, ensure_ascii=False)
+
+        # 清理超过5天的旧缓存
+        cleanup_old_cache()
+
         if args.json:
             print(json.dumps({
                 "code": 200,
-                "date": args.date or time.strftime("%m-%d"),
+                "date": today,
                 "data": results,
                 "time": time.strftime("%Y-%m-%d %H:%M:%S"),
             }, ensure_ascii=False))
         else:
-            print_hot_search(results, args.date)
+            print_hot_search(results)
     except requests.RequestException as e:
         if args.json:
             print(json.dumps({"code": 500, "error": f"请求失败: {e}"}, ensure_ascii=False))

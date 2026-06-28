@@ -55,3 +55,8 @@ r.Use(cors.New(cors.Config{
 		ExposeHeaders:    []string{"Content-Length", "Content-Type"},
 	}))
 ```
+
+### linux
+```shell
+kill -9 $(lsof -t -i:8080)
+```

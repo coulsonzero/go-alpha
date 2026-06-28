@@ -20,6 +20,7 @@ func SetupRouter() *gin.Engine {
 	r.Use(middleware.CORS())
 
 	userCtrl := controller.User{}
+	taskCtrl := controller.TaskController{}
 
 	// Health check
 	r.GET("/ping", func(c *gin.Context) {
@@ -39,6 +40,15 @@ func SetupRouter() *gin.Engine {
 
 	// Hot search
 	r.GET("/api/v1/hot_search", controller.HotSearch)
+
+	// Task
+	taskGroup := r.Group("/api/v1")
+	{
+		taskGroup.GET("/task", taskCtrl.ListTasks)
+		taskGroup.POST("/task", taskCtrl.AddTask)
+		taskGroup.PUT("/task/:id", taskCtrl.ToggleActive)
+		taskGroup.DELETE("/task/:id", taskCtrl.DeleteTask)
+	}
 
 	return r
 }
