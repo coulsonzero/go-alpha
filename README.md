@@ -84,11 +84,7 @@ kill -9 $(lsof -t -i:8080)
 我的推荐：Cookie/Session  
 
 ### docker
-1. 重新构建镜像并启动
-docker compose up -d --build
-
---build 会重新执行 Dockerfile 里的 go build，把新代码编译进去，然后启动新容器。
-
-2. 如果只想重建后端（不重启 MySQL/Redis）
-
+改动了后端代码，但数据库不显示：如果只想重建后端（不重启MySQL/Redis），也无需关闭之前的后端容器程序
+```sh
 docker compose up -d --build backend 
+```
