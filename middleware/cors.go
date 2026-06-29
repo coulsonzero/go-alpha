@@ -7,9 +7,10 @@ import (
 
 func CORS() gin.HandlerFunc {
 	return cors.New(cors.Config{
-		AllowAllOrigins: true,
-		AllowMethods:    []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowHeaders:    []string{"Origin", "Content-Type", "Authorization"},
-		ExposeHeaders:   []string{"Content-Length", "Content-Type"},
+		AllowOrigins:     []string{"http://localhost:5000", "http://alpha.coulsonzero.shop:5000"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length", "Content-Type"},
+		AllowCredentials: true,
 	})
 }
