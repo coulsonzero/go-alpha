@@ -9,6 +9,10 @@ import (
 	"go-alpha/middleware"
 )
 
+var (
+	authController controller.AuthController = controller.NewAuthController()
+)
+
 func SetupRouter() *gin.Engine {
 	r := gin.Default()
 
@@ -26,6 +30,17 @@ func SetupRouter() *gin.Engine {
 	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{"message": "pong"})
 	})
+
+	// Serve uploaded avatars under the API path so it uses the same origin
+	r.Static("/api/v1/avatar", "src/assets/avatar")
+
+	// auth
+	authGroup := r.Group("/api/v1")
+	{
+		authGroup.POST("/login", authController.Login)
+		authGroup.POST("/register", authController.Register)
+		authGroup.GET("/me", middleware.AuthRequired(), authController.Me)
+	}
 
 	// User CRUD
 	userGroup := r.Group("/api/v1")

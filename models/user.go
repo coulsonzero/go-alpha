@@ -9,7 +9,7 @@ import (
 type User struct {
 	gorm.Model
 	Username    string     `gorm:"type:varchar(100);not null" json:"username"`
-	Email       string     `gorm:"type:varchar(100);uniqueIndex;not null" json:"email"`
+	Email       string     `gorm:"type:varchar(100)" json:"email"`
 	Password    string     `gorm:"type:varchar(100);not null" json:"-"` // 无需显示
 	Website     string     `gorm:"type:varchar(100)" json:"website"`
 	Status      string     `gorm:"type:varchar(100);default:active" json:"status"`
